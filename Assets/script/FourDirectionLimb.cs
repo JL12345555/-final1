@@ -16,6 +16,11 @@ public class FourDirectionLimb : MonoBehaviour
     public float startAngle = 0f;
     public float currentAngle = 0f;
 
+    [Header("Rest / Sag")]
+    public bool useRestAngle = false;     // 只给腿开，手关掉
+    public float restAngle = -90f;
+    public float restReturnSpeed = 180f;
+
     [Header("Keyboard Input")]
     public KeyCode upKey;
     public KeyCode downKey;
@@ -35,7 +40,7 @@ public class FourDirectionLimb : MonoBehaviour
     {
         currentAngle = startAngle;
         SnapEndPointToCurrentAngle();
-        UpdateLimbVisual();
+        UpdateLimbVisual(false);
     }
 
     void Update()
@@ -44,44 +49,67 @@ public class FourDirectionLimb : MonoBehaviour
 
         bool handLocked = handGrip != null && handGrip.isGripping && handGrip.currentHold != null;
         bool footLocked = footPlant != null && footPlant.isPlanted && footPlant.currentFootHold != null;
+        bool locked = handLocked || footLocked;
 
-        // 没抓住/没踩住时，才允许输入控制末端点
-        if (!handLocked && !footLocked)
+        Vector2 inputDir = GetInputDirection();
+        bool hasInput = inputDir.magnitude > inputDeadZone;
+
+        if (!locked)
         {
-            HandleInputAndMoveEndPoint();
+            if (hasInput)
+            {
+                HandleInputAndMoveEndPoint(inputDir);
+            }
+            else if (useRestAngle)
+            {
+                currentAngle = Mathf.MoveTowardsAngle(
+                    currentAngle,
+                    restAngle,
+                    restReturnSpeed * Time.deltaTime
+                );
+
+                SnapEndPointToCurrentAngle();
+            }
+            else
+            {
+                // 没输入也没下垂时，保持当前角度，但要跟着 pivot 走
+                SnapEndPointToCurrentAngle();
+            }
         }
 
-        UpdateLimbVisual();
+        UpdateLimbVisual(locked);
     }
 
-    void HandleInputAndMoveEndPoint()
+    Vector2 GetInputDirection()
     {
         Vector2 inputDir = Vector2.zero;
 
-        if (useExternalInput)
+        // 手柄输入
+        if (useExternalInput && externalInput.magnitude > inputDeadZone)
         {
-            inputDir = externalInput;
-        }
-        else
-        {
-            if (Input.GetKey(upKey)) inputDir += Vector2.up;
-            if (Input.GetKey(downKey)) inputDir += Vector2.down;
-            if (Input.GetKey(leftKey)) inputDir += Vector2.left;
-            if (Input.GetKey(rightKey)) inputDir += Vector2.right;
+            inputDir += externalInput;
         }
 
-        if (inputDir.magnitude > inputDeadZone)
-        {
-            inputDir.Normalize();
+        // 键盘输入仍然保留
+        if (Input.GetKey(upKey)) inputDir += Vector2.up;
+        if (Input.GetKey(downKey)) inputDir += Vector2.down;
+        if (Input.GetKey(leftKey)) inputDir += Vector2.left;
+        if (Input.GetKey(rightKey)) inputDir += Vector2.right;
 
-            float targetAngle = Mathf.Atan2(inputDir.y, inputDir.x) * Mathf.Rad2Deg;
+        return inputDir;
+    }
 
-            currentAngle = Mathf.MoveTowardsAngle(
-                currentAngle,
-                targetAngle,
-                rotateSpeed * Time.deltaTime
-            );
-        }
+    void HandleInputAndMoveEndPoint(Vector2 inputDir)
+    {
+        inputDir.Normalize();
+
+        float targetAngle = Mathf.Atan2(inputDir.y, inputDir.x) * Mathf.Rad2Deg;
+
+        currentAngle = Mathf.MoveTowardsAngle(
+            currentAngle,
+            targetAngle,
+            rotateSpeed * Time.deltaTime
+        );
 
         SnapEndPointToCurrentAngle();
     }
@@ -96,28 +124,27 @@ public class FourDirectionLimb : MonoBehaviour
         endPoint.position = pivot.position + dir * length;
     }
 
-    void UpdateLimbVisual()
+    void UpdateLimbVisual(bool locked)
     {
         if (pivot == null || endPoint == null) return;
 
         Vector3 dir = endPoint.position - pivot.position;
-
         if (dir.sqrMagnitude < 0.0001f) return;
 
         float actualLength = dir.magnitude;
         Vector3 normalizedDir = dir.normalized;
 
-        // 白条放在中点
         transform.position = pivot.position + normalizedDir * (actualLength * 0.5f);
 
-        // 白条朝向末端
         float visualAngle = Mathf.Atan2(normalizedDir.y, normalizedDir.x) * Mathf.Rad2Deg;
         transform.rotation = Quaternion.Euler(0f, 0f, visualAngle + rotationOffset);
 
-        // 白条长度
         transform.localScale = new Vector3(thickness, actualLength * 0.5f, 1f);
 
-        // 同步当前角度，避免抓住/踩住后角度记录丢失
-        currentAngle = Mathf.Atan2(normalizedDir.y, normalizedDir.x) * Mathf.Rad2Deg;
+        // 只有锁住时，才反向同步 currentAngle，避免自由状态下抖动
+        if (locked)
+        {
+            currentAngle = Mathf.Atan2(normalizedDir.y, normalizedDir.x) * Mathf.Rad2Deg;
+        }
     }
 }
