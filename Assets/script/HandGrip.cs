@@ -13,27 +13,46 @@ public class HandGrip : MonoBehaviour
     public bool isGripping = false;
     public Transform currentHold;
 
+    [Header("Stamina")]
+    public float maxStamina = 10f;
+    public float currentStamina = 10f;
+    public float drainPerSecond = 1f;
+    public float staminaDrainMultiplier = 1f;
+
     private Transform candidateHold;
+
+    void Start()
+    {
+        currentStamina = maxStamina;
+    }
 
     void Update()
     {
         bool gripHeld = useExternalGrip ? externalGripHeld : Input.GetKey(gripKey);
 
-        if (gripHeld && candidateHold != null)
+        if (gripHeld && candidateHold != null && !isGripping)
         {
             isGripping = true;
             currentHold = candidateHold;
         }
 
-        if (!gripHeld)
-        {
-            isGripping = false;
-            currentHold = null;
-        }
-
         if (isGripping && currentHold != null)
         {
+            currentStamina -= drainPerSecond * staminaDrainMultiplier * Time.deltaTime;
+
+            if (currentStamina <= 0f)
+            {
+                currentStamina = 0f;
+                ReleaseGrip();
+                return;
+            }
+
             transform.position = currentHold.position;
+        }
+
+        if (!gripHeld && isGripping)
+        {
+            ReleaseGrip();
         }
     }
 
@@ -51,5 +70,11 @@ public class HandGrip : MonoBehaviour
         {
             candidateHold = null;
         }
+    }
+
+    public void ReleaseGrip()
+    {
+        isGripping = false;
+        currentHold = null;
     }
 }
