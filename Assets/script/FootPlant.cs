@@ -27,6 +27,19 @@ public class FootPlant : MonoBehaviour
     private Transform candidateFootHold;
     private float plantedTime = -999f;
 
+    private enum FootHoldType
+    {
+        Normal,
+        Long,
+        Slippery
+    }
+
+    private FootHoldType candidateHoldType = FootHoldType.Normal;
+    private FootHoldType currentHoldType = FootHoldType.Normal;
+
+    private BoxCollider2D currentBoxHold;
+    private Vector3 localFootPoint;
+
     void Update()
     {
         Vector2 inputDir = GetInputDirection();
@@ -36,18 +49,56 @@ public class FootPlant : MonoBehaviour
         {
             isPlanted = true;
             currentFootHold = candidateFootHold;
+            currentHoldType = candidateHoldType;
             plantedTime = Time.time;
+
+            if (currentHoldType == FootHoldType.Long || currentHoldType == FootHoldType.Slippery)
+            {
+                currentBoxHold = currentFootHold.GetComponent<BoxCollider2D>();
+
+                if (currentBoxHold != null)
+                {
+                    // 关键：记录脚碰到表面的最近位置，而不是中心点
+                    Vector3 closestWorldPoint = currentBoxHold.ClosestPoint(transform.position);
+                    localFootPoint = currentFootHold.InverseTransformPoint(closestWorldPoint);
+                }
+                else
+                {
+                    currentHoldType = FootHoldType.Normal;
+                    currentBoxHold = null;
+                }
+            }
+            else
+            {
+                currentBoxHold = null;
+            }
         }
 
         if (isPlanted && currentFootHold != null)
         {
-            // 脚锁在点上
-            transform.position = currentFootHold.position;
+            // 不同点类型，不同锁定方式
+            switch (currentHoldType)
+            {
+                case FootHoldType.Normal:
+                    transform.position = currentFootHold.position;
+                    break;
 
-            // 1. 腿拉太长自动脱离
+                case FootHoldType.Long:
+                case FootHoldType.Slippery:
+                    if (currentBoxHold == null)
+                    {
+                        ReleaseFoot();
+                        return;
+                    }
+
+                    transform.position = currentFootHold.TransformPoint(localFootPoint);
+                    break;
+            }
+
+            // 腿拉太长自动脱离
             if (hipPivot != null)
             {
-                float dist = Vector2.Distance(hipPivot.position, currentFootHold.position);
+                float dist = Vector2.Distance(hipPivot.position, transform.position);
                 if (dist > maxLegStretch)
                 {
                     ReleaseFoot();
@@ -55,18 +106,16 @@ public class FootPlant : MonoBehaviour
                 }
             }
 
-            // 2. 玩家明显想把脚挪走时自动脱离
-            // 给一点最小锁定时间，避免刚踩住立刻抖掉
+            // 玩家明显想把脚收回来时自动脱离
             if (Time.time - plantedTime > minLockTime)
             {
                 Vector2 footToHip = Vector2.zero;
 
                 if (hipPivot != null)
                 {
-                    footToHip = ((Vector2)hipPivot.position - (Vector2)currentFootHold.position).normalized;
+                    footToHip = ((Vector2)hipPivot.position - (Vector2)transform.position).normalized;
                 }
 
-                // 如果输入方向和“回收这条腿”的方向比较一致，就脱离
                 if (inputDir.magnitude > 0.2f)
                 {
                     float dot = Vector2.Dot(inputDir.normalized, footToHip);
@@ -88,6 +137,7 @@ public class FootPlant : MonoBehaviour
         }
 
         Vector2 inputDir = Vector2.zero;
+
         if (Input.GetKey(upKey)) inputDir += Vector2.up;
         if (Input.GetKey(downKey)) inputDir += Vector2.down;
         if (Input.GetKey(leftKey)) inputDir += Vector2.left;
@@ -101,17 +151,29 @@ public class FootPlant : MonoBehaviour
         if (other.CompareTag("HandHold"))
         {
             candidateFootHold = other.transform;
+            candidateHoldType = FootHoldType.Normal;
+        }
+        else if (other.CompareTag("LongHandHold"))
+        {
+            candidateFootHold = other.transform;
+            candidateHoldType = FootHoldType.Long;
+        }
+        else if (other.CompareTag("SlipperyHandHold"))
+        {
+            candidateFootHold = other.transform;
+            candidateHoldType = FootHoldType.Slippery;
         }
     }
 
     void OnTriggerExit2D(Collider2D other)
     {
-        if (other.CompareTag("HandHold"))
+        if ((other.CompareTag("HandHold") ||
+             other.CompareTag("LongHandHold") ||
+             other.CompareTag("SlipperyHandHold")) &&
+            candidateFootHold == other.transform)
         {
-            if (candidateFootHold == other.transform)
-            {
-                candidateFootHold = null;
-            }
+            candidateFootHold = null;
+            candidateHoldType = FootHoldType.Normal;
         }
     }
 
@@ -120,5 +182,8 @@ public class FootPlant : MonoBehaviour
         isPlanted = false;
         currentFootHold = null;
         candidateFootHold = null;
+        candidateHoldType = FootHoldType.Normal;
+        currentHoldType = FootHoldType.Normal;
+        currentBoxHold = null;
     }
 }

@@ -102,7 +102,7 @@ public class ClimberPhysicsGripMotor : MonoBehaviour
         joint.anchor = bodyRb.transform.InverseTransformPoint(shoulderPivot.position);
 
         // 抓点这一侧的连接点
-        // 普通点仍然是中心；长点/滑点使用 HandGrip 记录的实际抓住位置
+        // 普通点仍然连中心；长点/滑点连到实际抓住的位置
         joint.connectedAnchor = grip.GetConnectedAnchorLocal();
 
         // 只限制最大长度，不锁死当前位置
@@ -147,7 +147,7 @@ public class ClimberPhysicsGripMotor : MonoBehaviour
     {
         Vector2 totalForce = Vector2.zero;
 
-        // 左手：键盘 WASD + 左手柄 left stick
+        // 左手：键盘 WASD + 左手柄 handMove
         if (IsGripping(leftHandGrip))
         {
             Vector2 inputDir = Vector2.zero;
@@ -199,7 +199,7 @@ public class ClimberPhysicsGripMotor : MonoBehaviour
     {
         Vector2 totalForce = Vector2.zero;
 
-        // 左脚：键盘 IJKL + 左手柄 right stick
+        // 左脚：键盘 IJKL + 左手柄 footMove
         if (IsPlanted(leftFootPlant))
         {
             Vector2 inputDir = Vector2.zero;
@@ -220,7 +220,7 @@ public class ClimberPhysicsGripMotor : MonoBehaviour
             }
         }
 
-        // 右脚：键盘小键盘 + 右手柄 right stick
+        // 右脚：键盘小键盘 + 右手柄 footMove
         if (IsPlanted(rightFootPlant))
         {
             Vector2 inputDir = Vector2.zero;
