@@ -17,7 +17,7 @@ public class FourDirectionLimb : MonoBehaviour
     public float currentAngle = 0f;
 
     [Header("Rest / Sag")]
-    public bool useRestAngle = false;     // 只给腿开，手关掉
+    public bool useRestAngle = false;
     public float restAngle = -90f;
     public float restReturnSpeed = 180f;
 
@@ -32,7 +32,8 @@ public class FourDirectionLimb : MonoBehaviour
     public Vector2 externalInput;
 
     [Header("Visual")]
-    public float thickness = 0.2f;
+    public float visualLength = 1.2f;     // 模型显示长度，固定，不再动态拉伸
+    public float visualThickness = 1f;    // 模型宽度缩放
     public float rotationOffset = -90f;
     public float inputDeadZone = 0.2f;
 
@@ -84,13 +85,11 @@ public class FourDirectionLimb : MonoBehaviour
     {
         Vector2 inputDir = Vector2.zero;
 
-        // 手柄输入
         if (useExternalInput && externalInput.magnitude > inputDeadZone)
         {
             inputDir += externalInput;
         }
 
-        // 键盘输入仍然保留
         if (Input.GetKey(upKey)) inputDir += Vector2.up;
         if (Input.GetKey(downKey)) inputDir += Vector2.down;
         if (Input.GetKey(leftKey)) inputDir += Vector2.left;
@@ -131,17 +130,18 @@ public class FourDirectionLimb : MonoBehaviour
         Vector3 dir = endPoint.position - pivot.position;
         if (dir.sqrMagnitude < 0.0001f) return;
 
-        float actualLength = dir.magnitude;
         Vector3 normalizedDir = dir.normalized;
 
-        transform.position = pivot.position + normalizedDir * (actualLength * 0.5f);
+        // 用固定显示长度来摆模型，不再根据 actualLength 拉伸
+        transform.position = pivot.position + normalizedDir * (visualLength * 0.5f);
 
         float visualAngle = Mathf.Atan2(normalizedDir.y, normalizedDir.x) * Mathf.Rad2Deg;
         transform.rotation = Quaternion.Euler(0f, 0f, visualAngle + rotationOffset);
 
-        transform.localScale = new Vector3(thickness, actualLength * 0.5f, 1f);
+        // 固定缩放，不再按 actualLength 改变
+        transform.localScale = new Vector3(visualThickness, visualLength, 1f);
 
-        // 只有锁住时，才反向同步 currentAngle，避免自由状态下抖动
+        // 锁住时，同步角度，避免抓住/踩住后角度跳
         if (locked)
         {
             currentAngle = Mathf.Atan2(normalizedDir.y, normalizedDir.x) * Mathf.Rad2Deg;
