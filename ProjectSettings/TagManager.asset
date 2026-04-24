@@ -12,10 +12,10 @@ TagManager:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - BJ
   - Water
   - UI
-  - 
+  - CJ
   - 
   - 
   - 
@@ -44,6 +44,12 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: CJ
+    uniqueID: 1421910983
+    locked: 0
+  - name: BJ
+    uniqueID: 103172773
     locked: 0
   m_RenderingLayers:
   - Default
