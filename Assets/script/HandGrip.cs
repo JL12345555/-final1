@@ -46,7 +46,8 @@ public class HandGrip : MonoBehaviour
     private HoldType candidateHoldType = HoldType.Normal;
     private HoldType currentHoldType = HoldType.Normal;
 
-    private BoxCollider2D currentBoxHold;
+    // 这里改成通用 Collider2D
+    private Collider2D currentHoldCollider;
 
     // 长点 / 滑点记录抓住时的局部位置
     private Vector3 localGripPoint;
@@ -92,23 +93,23 @@ public class HandGrip : MonoBehaviour
 
             if (currentHoldType == HoldType.Long || currentHoldType == HoldType.Slippery)
             {
-                currentBoxHold = currentHold.GetComponent<BoxCollider2D>();
+                currentHoldCollider = currentHold.GetComponent<Collider2D>();
 
-                if (currentBoxHold != null)
+                if (currentHoldCollider != null)
                 {
-                    // 关键：记录抓点表面离手最近的位置，而不是中心
-                    Vector3 closestWorldPoint = currentBoxHold.ClosestPoint(transform.position);
+                    // 记录抓点表面离手最近的位置，而不是中心
+                    Vector3 closestWorldPoint = currentHoldCollider.ClosestPoint(transform.position);
                     localGripPoint = currentHold.InverseTransformPoint(closestWorldPoint);
                 }
                 else
                 {
                     currentHoldType = HoldType.Normal;
-                    currentBoxHold = null;
+                    currentHoldCollider = null;
                 }
             }
             else
             {
-                currentBoxHold = null;
+                currentHoldCollider = null;
             }
         }
 
@@ -138,7 +139,7 @@ public class HandGrip : MonoBehaviour
                     break;
 
                 case HoldType.Long:
-                    if (currentBoxHold == null)
+                    if (currentHoldCollider == null)
                     {
                         ForceReleaseAll(true);
                         return;
@@ -150,7 +151,7 @@ public class HandGrip : MonoBehaviour
                     break;
 
                 case HoldType.Slippery:
-                    if (currentBoxHold == null)
+                    if (currentHoldCollider == null)
                     {
                         ForceReleaseAll(true);
                         return;
@@ -164,26 +165,25 @@ public class HandGrip : MonoBehaviour
 
     void UpdateSlipperyGrip()
     {
-        float nextX = localGripPoint.x + currentSlipDirection * slipperySpeed * Time.deltaTime;
-
-        Vector2 min = currentBoxHold.offset - currentBoxHold.size * 0.5f;
-        Vector2 max = currentBoxHold.offset + currentBoxHold.size * 0.5f;
-
-        if (nextX < min.x) nextX = min.x;
-        if (nextX > max.x) nextX = max.x;
-
+        // 通用 Collider2D 没有 size/offset，最简单稳定的做法：
+        // 先沿本地 X 滑，再用 ClosestPoint 吸回表面
         Vector3 nextLocalGripPoint = localGripPoint;
-        nextLocalGripPoint.x = nextX;
+        nextLocalGripPoint.x += currentSlipDirection * slipperySpeed * Time.deltaTime;
 
-        Vector3 slipperyTarget = currentHold.TransformPoint(nextLocalGripPoint);
+        Vector3 desiredWorldPoint = currentHold.TransformPoint(nextLocalGripPoint);
+
+        // 拉回抓点表面
+        Vector3 surfaceWorldPoint = currentHoldCollider.ClosestPoint(desiredWorldPoint);
+
+        Vector3 slipperyTarget = surfaceWorldPoint;
 
         // 不让手臂被拉长
         transform.position = ClampToReach(slipperyTarget);
 
-        // 只有目标点仍在可达范围内，才推进滑动
+        // 只有目标点仍在可达范围内，才推进滑动记录
         if (shoulderPivot == null || Vector2.Distance(shoulderPivot.position, slipperyTarget) <= maxReach)
         {
-            localGripPoint = nextLocalGripPoint;
+            localGripPoint = currentHold.InverseTransformPoint(surfaceWorldPoint);
         }
     }
 
@@ -228,7 +228,7 @@ public class HandGrip : MonoBehaviour
         isGripping = false;
         currentHold = null;
         currentHoldType = HoldType.Normal;
-        currentBoxHold = null;
+        currentHoldCollider = null;
 
         if (startCooldown)
         {
@@ -241,7 +241,7 @@ public class HandGrip : MonoBehaviour
         isGripping = false;
         currentHold = null;
         currentHoldType = HoldType.Normal;
-        currentBoxHold = null;
+        currentHoldCollider = null;
 
         candidateHold = null;
         candidateHoldType = HoldType.Normal;

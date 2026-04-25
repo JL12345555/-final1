@@ -483,8 +483,8 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 4
---- !u!61 &72439687
-BoxCollider2D:
+--- !u!70 &72439691
+CapsuleCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -517,18 +517,9 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0.27598697, y: 1.145035}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0, y: 0}
-    oldSize: {x: 0, y: 0}
-    newSize: {x: 0, y: 0}
-    adaptiveTilingThreshold: 0
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  m_Size: {x: 0.57898414, y: 0.79864025}
-  m_EdgeRadius: 0
+  m_Offset: {x: 0.18973927, y: 0.62696373}
+  m_Size: {x: 1.7869247, y: 2.2539272}
+  m_Direction: 0
 --- !u!1 &76965715
 GameObject:
   m_ObjectHideFlags: 0
@@ -12805,7 +12796,7 @@ PrefabInstance:
       addedObject: {fileID: 72439682}
     - targetCorrespondingSourceObject: {fileID: 2443579336526703429, guid: 45807239f145ff84cba2f34d910d8405, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 72439687}
+      addedObject: {fileID: 72439691}
     - targetCorrespondingSourceObject: {fileID: 2680593290255390414, guid: 45807239f145ff84cba2f34d910d8405, type: 3}
       insertIndex: -1
       addedObject: {fileID: 107902875}
